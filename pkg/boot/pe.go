@@ -29,6 +29,7 @@ func PEImageFromFile(kernel *os.File) (*PEImage, error) {
 }
 
 const M16 = 0x1000000
+const KEXEC_RUN_PE = 0x00000004
 
 // Execute implements OSImage.Execute.
 func (p *PEImage) Execute() error {
@@ -65,7 +66,7 @@ func (p *PEImage) Execute() error {
 		entry = uintptr(oh.AddressOfEntryPoint)
 	}
 
-	if err := kexec.Load(M16+entry, segment, 0); err != nil {
+	if err := kexec.Load(M16+entry, segment, KEXEC_RUN_PE); err != nil {
 		return err
 	}
 	// kexec.Reboot()
