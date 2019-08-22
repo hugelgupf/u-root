@@ -62,9 +62,9 @@ qemu-system-x86_64 -L .                   \
   -m ${MEM}                               \
   -smp "$(nproc)"                         \
   -serial stdio                           \
-  -net none                               \
   -enable-kvm                             \
   -s
 
+#  -net none                               \
 stty sane
 
