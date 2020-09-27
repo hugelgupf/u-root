@@ -53,7 +53,7 @@ func InMemFile(f *os.File) (InMemReaderAt, error) {
 	if err != nil {
 		return nil, err
 	}
-	b, err := unix.Mmap(int(f.Fd()), 0, int(fi.Size()), unix.PROT_READ, unix.MAP_PRIVATE)
+	b, err := unix.Mmap(int(f.Fd()), 0, int(fi.Size()), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_PRIVATE)
 	if err != nil {
 		return nil, err
 	}

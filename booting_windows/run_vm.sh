@@ -61,14 +61,16 @@ qemu-system-x86_64 -L . \
   -bios "${BIOS_PATH}"                    \
   -kernel "${KERNEL_PATH}"                \
   -initrd /tmp/initramfs.linux_amd64.cpio \
-  -hda ${WINDOWS_DISK}                    \
   -append "${BOOT_FLAGS}"                 \
   -m ${MEM}                               \
   -smp "$(nproc)"                         \
   -serial stdio                           \
   -no-reboot \
   -enable-kvm \
+  -hda ${WINDOWS_DISK}                    \
   -s
+
+# -cdrom $HOME/nerf/baremetal/esxi/vmware.iso \
 
 # trace interrupts. must not have -enable-kvm
 #  -d int \
