@@ -32,7 +32,7 @@ fi
 if [[ "${PARAM1}" == "rebuild_uroot" ]] || \
    [[ "${PARAM2}" == "rebuild_uroot" ]]; then
   pushd efi_fs
-  u-root -build=bb -files=bootmgfw.efi
+  u-root -build=bb -files=bootmgfw.efi world
   popd
 fi
 
