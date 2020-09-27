@@ -18,7 +18,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := osi.Execute(); err != nil {
+	if err := osi.Load(false); err != nil {
 		log.Fatal(err)
 	}
 }

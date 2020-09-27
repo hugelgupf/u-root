@@ -18,6 +18,18 @@ type PEImage struct {
 	Kernel io.ReaderAt
 }
 
+var _ OSImage = &PEImage{}
+
+func (PEImage) Label() string {
+	return "EFI Image"
+}
+
+func (PEImage) String() string {
+	return "EFI Image"
+}
+
+func (PEImage) Edit(func(cmdline string) string) {}
+
 func PEImageFromFile(kernel *os.File) (*PEImage, error) {
 	k, err := uio.InMemFile(kernel)
 	if err != nil {
@@ -31,8 +43,8 @@ func PEImageFromFile(kernel *os.File) (*PEImage, error) {
 const M16 = 0x1000000
 const KEXEC_RUN_PE = 0x00000004
 
-// Execute implements OSImage.Execute.
-func (p *PEImage) Execute() error {
+// Load implements OSImage.Load.
+func (p *PEImage) Load(verbose bool) error {
 	f, err := pe.NewFile(p.Kernel)
 	if err != nil {
 		return err
@@ -84,9 +96,5 @@ func (p *PEImage) Execute() error {
 		entry = uintptr(oh.AddressOfEntryPoint)
 	}
 
-	if err := kexec.Load(M16+entry, segment, KEXEC_RUN_PE); err != nil {
-		return err
-	}
-	// kexec.Reboot()
-	return nil
+	return kexec.Load(M16+entry, segment, KEXEC_RUN_PE)
 }
