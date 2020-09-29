@@ -51,9 +51,13 @@ KERNEL_PATH=linux/arch/x86_64/boot/bzImage
 BOOT_FLAGS="earlyprintk=ttyS0 printk=ttyS0 console=ttyS0 root=/dev/sda1 noefi"
 
 # Make sure we get the graphical terminal
-export DISPLAY=:0
+#
+# If you're remote, you'll want to set this manually. Run "xauth list" and try
+# them all, I suppose.
+#
+#export DISPLAY=:0
 
-qemu-system-x86_64 -L .                   \
+qemu-system-x86_64 -L . \
   -bios "${BIOS_PATH}"                    \
   -kernel "${KERNEL_PATH}"                \
   -initrd /tmp/initramfs.linux_amd64.cpio \
@@ -62,8 +66,17 @@ qemu-system-x86_64 -L .                   \
   -m ${MEM}                               \
   -smp "$(nproc)"                         \
   -serial stdio                           \
-  -enable-kvm                             \
+  -no-reboot \
+  -enable-kvm \
   -s
+
+# trace interrupts. must not have -enable-kvm
+#  -d int \
+#  -D log.txt \
+
+# trace crashes that don't print panic traces.
+#  -d cpu_reset \
+#  -D log.txt \
 
 #  -net none                               \
 stty sane
