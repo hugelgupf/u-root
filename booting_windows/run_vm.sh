@@ -32,7 +32,7 @@ fi
 if [[ "${PARAM1}" == "rebuild_uroot" ]] || \
    [[ "${PARAM2}" == "rebuild_uroot" ]]; then
   pushd efi_fs
-  u-root -build=bb -files=bootmgfw.efi world
+  u-root -build=bb world
   popd
 fi
 
@@ -40,7 +40,7 @@ fi
 # We want to mask all writes to the original Windows image. We therefore
 # create a new snampshot file, which is a delta file. We remove it before
 # every run to make sure we start fresh with the original image.
-WINDOWS_IMAGE="${WORKSPACE}"/windows.img
+WINDOWS_IMAGE="${EFI_WORKSPACE}"/windows.img
 WINDOWS_DISK=windows_write_masking.img
 
 if [[ ! -f "${WINDOWS_DISK}" ]]; then

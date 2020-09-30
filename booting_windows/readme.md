@@ -8,7 +8,7 @@ you read them carefully before running them!
    Don't forget to have go/bin in your path via `export PATH=${HOME}/go/bin:${PATH}`
 1. Packages required to build Linux kernel
 1. A functional Windows Server 2019 or Windows 10 **raw** image, asumed to exist at
-   `"${WORKSPACE}"/windows.img`. `setup.sh` will create a masking image over it,
+   `"${EFI_WORKSPACE}"/windows.img`. `setup.sh` will create a masking image over it,
    so the original image will not be modified. Windows boot manager,
    bootmgfw.efi is assumed to exist in the 2nd partition of the image. See
    `install_windows.sh` for an example.
@@ -27,9 +27,9 @@ you read them carefully before running them!
 
     ```shell
     pushd ~/go/src/github.com/u-root/u-root
-    git remote add oweisse https://github.com/oweisse/u-root  # our revised uroot repo
-    git fetch oweisse
-    git checkout -b kexec_test oweisse/kexec_test
+    git remote add hugelgupf https://github.com/hugelgupf/u-root  # our revised uroot repo
+    git fetch hugelgupf
+    git checkout -b efikexec_rebase hugelgupf/efikexec_rebase
     go install
     popd
     ```
@@ -39,10 +39,9 @@ Setup Linux kernel source tree with our modifications. We modified
 kexec_load syscall to launch EFI applications. **Read the script before running!**
 
 The script will:
-1. Download an EFI loader image.
-1. Extract windows boot-manager from the windows image (see prerequisites above).
-1. Clone our forked linux kernel from `https://github.com/oweisse/linux/`
-   into $EFI_WORKSPACE.
+1. Download an EFI image (OVMF).
+1. Clone our forked linux kernel from `https://github.com/hugelgupf/linux/`
+   (branch `efikexec`) into $EFI_WORKSPACE.
 1. Install prerequisites (sudo required)
 1. Build Linux kernel
 
@@ -52,8 +51,7 @@ The script will:
 
 ## Running u-Root and booting Windows
 The script command line arguments:
-1. rebuild_uroot: will also add bootmgfw.efi, extracted from the Windows image
-   to the filesystem.
+1. rebuild_uroot: rebuilds u-root initramfs.
 1. rebuild_kernel: Only necessary if you modified the kernel at
    $EFI_WORKSPACE/linux
 
@@ -61,9 +59,11 @@ The script command line arguments:
 ./run_vm.sh rebuild_uroot rebuild_kernel
 ```
 
-After u-root has loaded, launch Windows bootmanager"
+After u-root has loaded, launch Windows bootmanager:
 ```
-pekexec bootmgfw.efi
+mount -r /dev/sda2 /tmp
+cd /tmp/EFI/Microsoft/Boot
+pekexec ./bootmgfw.efi
 ```
 
 ## Attaching gdb
