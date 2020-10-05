@@ -51,7 +51,12 @@ func Segments(kernel io.ReaderAt) (kexec.Segments, uintptr, error) {
 	}
 
 	//chosenBase := uintptr(0x100000000)
-	chosenBase := uintptr(imageBase)
+	var chosenBase uintptr
+	if imageBase == 0 {
+		chosenBase = 0x10000000
+	} else {
+		chosenBase = uintptr(imageBase)
+	}
 
 	log.Printf("entry: %#x", entry)
 
@@ -70,7 +75,6 @@ func Segments(kernel io.ReaderAt) (kexec.Segments, uintptr, error) {
 			Size:  uint(uint64(section_0.VirtualAddress)),
 		},
 	}
-	log.Printf("virt: %#x + %#x | phys: %#x + %#x", s.Buf.Start, s.Buf.Size, s.Phys.Start, s.Phys.Size)
 	segment = append(segment, s)
 
 	var reloc *pe.Section
@@ -89,8 +93,11 @@ func Segments(kernel io.ReaderAt) (kexec.Segments, uintptr, error) {
 				Size:  uint(section.VirtualSize),
 			},
 		}
-		log.Printf("virt: %#x + %#x | phys: %#x + %#x (%s)", s.Buf.Start, s.Buf.Size, s.Phys.Start, s.Phys.Size, section.Name)
 		segment = append(segment, s)
+	}
+	for _, s := range segment {
+		log.Printf("%s", s)
+		//log.Printf("virt: %#x + %#x | phys: %#x + %#x", s.Buf.Start, s.Buf.Size, s.Phys.Start, s.Phys.Size)
 	}
 
 	if reloc != nil {

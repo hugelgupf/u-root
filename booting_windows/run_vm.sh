@@ -71,6 +71,7 @@ qemu-system-x86_64 -L . \
   -s
 
 # -cdrom $HOME/nerf/baremetal/esxi/vmware.iso \
+# -d cpu_reset -D log.txt \
 
 # trace interrupts. must not have -enable-kvm
 #  -d int \

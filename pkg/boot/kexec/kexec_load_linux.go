@@ -19,15 +19,21 @@ import (
 //
 // Load will align segments to page boundaries and deduplicate overlapping ranges.
 func Load(entry uintptr, segments Segments, flags uint64) error {
-	segments, err := AlignAndMerge(segments)
+	nsegments, err := AlignAndMerge(segments)
 	if err != nil {
 		return fmt.Errorf("could not align segments: %w", err)
 	}
 
-	if !segments.PhysContains(entry) {
+	// Sanity check. This is not strictly necessary.
+	if err := nsegments.IsSupersetOf(segments); err != nil {
+		return err
+	}
+
+	if !nsegments.PhysContains(entry) {
 		return fmt.Errorf("entry point %#v is not contained by any segment", entry)
 	}
-	return rawLoad(entry, segments, flags)
+
+	return rawLoad(entry, nsegments, flags)
 }
 
 // ErrKexec is returned by Load if the kexec failed. It describes entry point,
