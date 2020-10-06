@@ -70,7 +70,7 @@ qemu-system-x86_64 -L . \
   -hda ${WINDOWS_DISK}                    \
   -s
 
-# -cdrom $HOME/nerf/baremetal/esxi/vmware.iso \
+# -cdrom $HOME/nerf/baremetal/esxi/vmware-custom-bootloader.iso \
 # -d cpu_reset -D log.txt \
 
 # trace interrupts. must not have -enable-kvm
