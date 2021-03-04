@@ -5,6 +5,7 @@
 package qemu
 
 import (
+	"encoding/binary"
 	"fmt"
 	"net"
 	"sync/atomic"
@@ -39,6 +40,15 @@ func NewNetwork() *Network {
 	}
 }
 
+// NewNetworkPort creates a new QEMU network between QEMU VMs.
+//
+// The network is closed from the world and only between the QEMU VMs.
+func NewNetworkPort(port uint16) *Network {
+	return &Network{
+		port: port,
+	}
+}
+
 // NetworkOpt returns additional QEMU command-line parameters based on the net
 // device ID.
 type NetworkOpt func(netdev string) []string
@@ -63,11 +73,14 @@ func (n *Network) NewVM(nopts ...NetworkOpt) Device {
 	newNum := atomic.AddUint32(&n.numVMs, 1)
 	num := newNum - 1
 
+	var portb [2]byte
+	binary.LittleEndian.PutUint16(portb[:], n.port)
+
 	// MAC for the virtualized NIC.
 	//
 	// This is from the range of locally administered address ranges.
-	mac := net.HardwareAddr{0x0e, 0x00, 0x00, 0x00, 0x00, byte(num)}
-	devID := fmt.Sprintf("vm%d", num)
+	mac := net.HardwareAddr{0x0e, portb[0], portb[1], 0x00, 0x00, byte(num)}
+	devID := fmt.Sprintf("vm-p%d-n%d", n.port, num)
 
 	args := []string{"-device", fmt.Sprintf("e1000,netdev=%s,mac=%s", devID, mac)}
 	// Note: QEMU in CircleCI seems to in solve cases fail when using just ':1234' format.

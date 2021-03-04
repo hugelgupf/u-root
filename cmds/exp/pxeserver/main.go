@@ -24,6 +24,7 @@ import (
 	"github.com/insomniacslk/dhcp/dhcpv4/server4"
 	"github.com/insomniacslk/dhcp/dhcpv6"
 	"github.com/insomniacslk/dhcp/dhcpv6/server6"
+	"github.com/u-root/u-root/pkg/uflag"
 	"pack.ag/tftp"
 )
 
@@ -40,6 +41,7 @@ var (
 
 	// DHCPv6-specific
 	ipv6           = flag.Bool("6", false, "DHCPv6 server")
+	ifaces6        uflag.Strings
 	yourIP6        = flag.String("your-ip6", "fec0::3", "IPv6 to hand to all clients")
 	v6Bootfilename = flag.String("v6-bootfilename", "", "Boot file to serve via DHCPv6")
 
@@ -49,6 +51,10 @@ var (
 	httpDir  = flag.String("http-dir", "", "Directory to serve over HTTP")
 	httpPort = flag.Int("http-port", 80, "Port to serve HTTP on")
 )
+
+func init() {
+	flag.Var(&ifaces6, "ifaces6", "Interfaces to run DHCPv6 on")
+}
 
 type dserver4 struct {
 	mac          net.HardwareAddr
@@ -124,13 +130,14 @@ func (s *dserver4) dhcpHandler(conn net.PacketConn, peer net.Addr, m *dhcpv4.DHC
 }
 
 type dserver6 struct {
+	name        string
 	mac         net.HardwareAddr
 	yourIP      net.IP
 	bootfileurl string
 }
 
 func (s *dserver6) dhcpHandler(conn net.PacketConn, peer net.Addr, m dhcpv6.DHCPv6) {
-	log.Printf("Handling DHCPv6 request %v sent by %v", m.Summary(), peer.String())
+	log.Printf("[%s] Handling DHCPv6 request %v sent by %v", s.name, m, peer.String())
 
 	msg, err := m.GetInnerMessage()
 	if err != nil {
@@ -253,23 +260,30 @@ func main() {
 		go func() {
 			defer wg.Done()
 
-			s := &dserver6{
-				mac:         maca,
-				yourIP:      net.ParseIP(*yourIP6),
-				bootfileurl: *v6Bootfilename,
-			}
-			laddr := &net.UDPAddr{
-				IP:   net.IPv6unspecified,
-				Port: dhcpv6.DefaultServerPort,
-			}
-			server, err := server6.NewServer("eth0", laddr, s.dhcpHandler)
-			if err != nil {
-				log.Fatal(err)
-			}
+			for _, iface := range ifaces6 {
+				s := &dserver6{
+					mac:         maca,
+					yourIP:      net.ParseIP(*yourIP6),
+					bootfileurl: *v6Bootfilename,
+					name:        fmt.Sprintf("%s server", iface),
+				}
+				laddr := &net.UDPAddr{
+					IP:   net.IPv6unspecified,
+					Port: dhcpv6.DefaultServerPort,
+				}
+				server, err := server6.NewServer(iface, laddr, s.dhcpHandler, server6.WithDebugLogger())
+				if err != nil {
+					log.Fatal(err)
+				}
 
-			log.Println("starting dhcpv6 server")
-			if err := server.Serve(); err != nil {
-				log.Fatal(err)
+				log.Println("starting dhcpv6 server on %s", iface)
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					if err := server.Serve(); err != nil {
+						log.Fatal(err)
+					}
+				}()
 			}
 		}()
 	}

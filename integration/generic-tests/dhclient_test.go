@@ -146,24 +146,28 @@ func TestDhclient6(t *testing.T) {
 	// We don't currently have a radvd server we can use, so we also cannot
 	// try to download a file using the DHCP configuration.
 	network := qemu.NewNetwork()
+	net2 := qemu.NewNetworkPort(1235)
 	dhcpServer, scleanup := vmtest.QEMUTest(t, &vmtest.Options{
 		Name: "TestDhclient6_Server",
 		TestCmds: []string{
 			"ip link set eth0 up",
-			"pxeserver -6 -your-ip6=fec0::3 -4=false",
+			"ip link set eth1 up",
+			"ip a",
+			"pxeserver -6 -your-ip6=fec0::3 -4=false -ifaces6=eth0 -ifaces6=eth1",
 		},
 		QEMUOpts: qemu.Options{
 			SerialOutput: vmtest.TestLineWriter(t, "server"),
 			Timeout:      30 * time.Second,
 			Devices: []qemu.Device{
 				network.NewVM(),
+				net2.NewVM(),
 			},
 		},
 	})
 	defer scleanup()
 
 	dhcpClient, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
-		Name: "TestDhclient6_Client",
+		Name: "TestDhclient6_Client1",
 		TestCmds: []string{
 			"dhclient -ipv4=false -vv",
 			"ip a",
@@ -186,6 +190,30 @@ func TestDhclient6(t *testing.T) {
 		t.Errorf("%s configure: %v", testutil.NowLog(), err)
 	}
 	if err := dhcpClient.Expect("inet6 fec0::3"); err != nil {
+		t.Errorf("%s ip: %v", testutil.NowLog(), err)
+	}
+
+	dhcpClient2, ccleanup := vmtest.QEMUTest(t, &vmtest.Options{
+		Name: "TestDhclient6_Client2",
+		TestCmds: []string{
+			"dhclient -ipv4=false -vv",
+			"ip a",
+			"shutdown -h",
+		},
+		QEMUOpts: qemu.Options{
+			SerialOutput: vmtest.TestLineWriter(t, "client2"),
+			Timeout:      30 * time.Second,
+			Devices: []qemu.Device{
+				net2.NewVM(),
+			},
+		},
+	})
+	defer ccleanup()
+
+	if err := dhcpClient2.Expect("Configured eth0 with IPv6 DHCP Lease IP fec0::3"); err != nil {
+		t.Errorf("%s configure: %v", testutil.NowLog(), err)
+	}
+	if err := dhcpClient2.Expect("inet6 fec0::3"); err != nil {
 		t.Errorf("%s ip: %v", testutil.NowLog(), err)
 	}
 }
