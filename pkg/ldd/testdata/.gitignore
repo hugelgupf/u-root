@@ -1,0 +1,6 @@
+main
+hello.o
+lib.o
+lib.so
+!tiny.so
+!tinyagain.so
