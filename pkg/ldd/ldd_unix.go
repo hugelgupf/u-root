@@ -102,6 +102,7 @@ func GetInterp(file string) (string, error) {
 	if err != nil {
 		return "", nil
 	}
+
 	s := f.Section(".interp")
 	var interp string
 	if s != nil {
@@ -111,14 +112,18 @@ func GetInterp(file string) (string, error) {
 		if err != nil {
 			return "fail", err
 		}
+
+		// .interp section is file name + \0 character.
+		interp := strings.TrimRight(string(i), "\000")
+
 		// Ignore #! interpreters
-		if len(i) > 1 && i[0] == '#' && i[1] == '!' {
+		if strings.HasPrefix(s, "#!") {
 			return "", nil
 		}
-		// annoyingly, s.Data() seems to return the null at the end and,
-		// weirdly, that seems to confuse the kernel. Truncate it.
-		interp = string(i[:len(i)-1])
+
+		return interp
 	}
+
 	if interp == "" {
 		if f.Type != elf.ET_DYN || f.Class == elf.ELFCLASSNONE {
 			return "", nil
