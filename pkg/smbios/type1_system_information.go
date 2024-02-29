@@ -15,7 +15,8 @@ import (
 
 // SystemInfo is defined in DSP0134 7.2.
 type SystemInfo struct {
-	Table
+	Header
+
 	Manufacturer string     // 04h
 	ProductName  string     // 05h
 	Version      string     // 06h
@@ -31,6 +32,19 @@ func ParseSystemInfo(t *Table) (*SystemInfo, error) {
 	return parseSystemInfo(parseStruct, t)
 }
 
+func (si *SystemInfo) ToTable() (*Table, error) {
+	var t Table
+	if _, err := toTable(&t, si); err != nil {
+		return nil, err
+	}
+	// TODO: set length in header.
+	return &t, nil
+}
+
+func (si *SystemInfo) Type() TableType {
+	return TableTypeSystemInfo
+}
+
 func parseSystemInfo(parseFn parseStructure, t *Table) (*SystemInfo, error) {
 	if t.Type != TableTypeSystemInfo {
 		return nil, fmt.Errorf("invalid table type %d", t.Type)
@@ -38,7 +52,7 @@ func parseSystemInfo(parseFn parseStructure, t *Table) (*SystemInfo, error) {
 	if t.Len() < 8 {
 		return nil, errors.New("required fields missing")
 	}
-	si := &SystemInfo{Table: *t}
+	si := &SystemInfo{Header: t.Header}
 	if _, err := parseFn(t, 0 /* off */, false /* complete */, si); err != nil {
 		return nil, err
 	}
@@ -55,6 +69,12 @@ func (u *UUID) ParseField(t *Table, off int) (int, error) {
 	return off + 16, nil
 }
 
+// WriteField writes UUD field within a table.
+func (u *UUID) WriteField(t *Table) (int, error) {
+	t.WriteBytes(u[:])
+	return 16, nil
+}
+
 func (si *SystemInfo) String() string {
 	lines := []string{
 		si.Header.String(),
@@ -63,13 +83,13 @@ func (si *SystemInfo) String() string {
 		fmt.Sprintf("Version: %s", si.Version),
 		fmt.Sprintf("Serial Number: %s", si.SerialNumber),
 	}
-	if si.Len() >= 8 { // 2.1+
+	if si.Length >= 8 { // 2.1+
 		lines = append(lines,
 			fmt.Sprintf("UUID: %s", si.UUID),
 			fmt.Sprintf("Wake-up Type: %s", si.WakeupType),
 		)
 	}
-	if si.Len() >= 0x19 { // 2.4+
+	if si.Length >= 0x19 { // 2.4+
 		lines = append(lines,
 			fmt.Sprintf("SKU Number: %s", si.SKUNumber),
 			fmt.Sprintf("Family: %s", si.Family),

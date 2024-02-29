@@ -59,10 +59,19 @@ func TestGetSystemInfo(t *testing.T) {
 		t.Errorf("FromSysfs as a requirement failed.")
 	}
 
+	tt := info.GetTablesByType(TableTypeSystemInfo)
+	t.Logf("table: %#v", tt[0])
+
 	systeminfo, err := info.GetSystemInfo()
 	if err != nil || systeminfo == nil {
 		t.Errorf("GetSystemInfo() = %q, '%v'", systeminfo, err)
 	}
+
+	ttt, err := systeminfo.ToTable()
+	if err != nil {
+		t.Error(err)
+	}
+	t.Logf("table: %#v", ttt)
 }
 
 func TestGetChassisInfo(t *testing.T) {

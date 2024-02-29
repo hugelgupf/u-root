@@ -5,7 +5,9 @@
 package smbios
 
 import (
+	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -18,9 +20,8 @@ func TestSystemInfoString(t *testing.T) {
 		{
 			name: "All Infos provided",
 			val: SystemInfo{
-				Table: Table{
-					data: []byte{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
-						0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf},
+				Header: Header{
+					Length: 32,
 				},
 				Manufacturer: "u-root testing",
 				ProductName:  "Illusion",
@@ -44,8 +45,8 @@ BIOS Information
 		{
 			name: "UUID not present",
 			val: SystemInfo{
-				Table: Table{
-					data: []byte{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9},
+				Header: Header{
+					Length: 10,
 				},
 				Manufacturer: "u-root testing",
 				ProductName:  "Illusion",
@@ -65,10 +66,10 @@ BIOS Information
 	Wake-up Type: Reserved`,
 		},
 		{
-			name: "UUID not present",
+			name: "UUID not settable",
 			val: SystemInfo{
-				Table: Table{
-					data: []byte{0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9},
+				Header: Header{
+					Length: 10,
 				},
 				Manufacturer: "u-root testing",
 				ProductName:  "Illusion",
@@ -200,5 +201,122 @@ func TestParseSystemInfo(t *testing.T) {
 				t.Errorf("parseSystemInfo(): '%v', want '%v'", err, tt.want)
 			}
 		})
+	}
+}
+
+func TestParseSI(t *testing.T) {
+	for _, tt := range []struct {
+		st   *Table
+		want *SystemInfo
+		err  error
+	}{
+		{
+			st: &Table{
+				Header: Header{Type: 0x1, Length: 0x1b, Handle: 0x100},
+				data: []uint8{
+					0x01,
+					0x1b,
+					0x00, 0x01,
+					0x1,
+					0x2,
+					0x3,
+					0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0,
+					0x0,
+					0x6,
+					0x0,
+					0x0,
+				},
+				strings: []string{
+					"QEMU",
+					"Standard PC (i440FX + PIIX, 1996)",
+					"pc-i440fx-8.2",
+				},
+			},
+			want: &SystemInfo{
+				Header: Header{
+					Type:   0x1,
+					Length: 0x1b,
+					Handle: 0x100,
+				},
+				Manufacturer: "QEMU",
+				ProductName:  "Standard PC (i440FX + PIIX, 1996)",
+				Version:      "pc-i440fx-8.2",
+				UUID: UUID{
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+				},
+				WakeupType: 6,
+			},
+		},
+	} {
+		i := &Info{Tables: []*Table{tt.st}}
+		got, err := i.GetSystemInfo()
+		if !errors.Is(err, tt.err) {
+			t.Errorf("GetSystemInfo = %v, want %v", err, tt.err)
+		}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("GetSystemInfo =\n%#v, want\n%#v", got, tt.want)
+		}
+	}
+}
+
+func TestSIToTable(t *testing.T) {
+	for _, tt := range []struct {
+		want *Table
+		si   *SystemInfo
+		err  error
+	}{
+		{
+			want: &Table{
+				Header: Header{Type: 0x1, Length: 0x1b, Handle: 0x100},
+				data: []uint8{
+					0x01,
+					0x1b,
+					0x00, 0x01,
+					0x1,
+					0x2,
+					0x3,
+					0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0,
+					0x0,
+					0x6,
+					0x0,
+					0x0,
+				},
+				strings: []string{
+					"QEMU",
+					"Standard PC (i440FX + PIIX, 1996)",
+					"pc-i440fx-8.2",
+				},
+			},
+			si: &SystemInfo{
+				Header:       Header{Type: 0x1, Length: 0x1b, Handle: 0x100},
+				Manufacturer: "QEMU",
+				ProductName:  "Standard PC (i440FX + PIIX, 1996)",
+				Version:      "pc-i440fx-8.2",
+				UUID: UUID{
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+					0, 0, 0, 0,
+				},
+				WakeupType: 6,
+			},
+		},
+	} {
+		got, err := tt.si.ToTable()
+		if !errors.Is(err, tt.err) {
+			t.Errorf("ToTable = %v, want %v", err, tt.err)
+		}
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("ToTable =\n%#v, want\n%#v", got, tt.want)
+		}
 	}
 }

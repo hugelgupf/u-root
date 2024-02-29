@@ -49,6 +49,39 @@ func (t *Table) GetByteAt(offset int) (uint8, error) {
 	return t.data[offset], nil
 }
 
+func (t *Table) WriteByte(b uint8) {
+	t.data = append(t.data, b)
+}
+
+func (t *Table) WriteWord(v uint16) {
+	t.data = append(t.data, 0, 0)
+	binary.LittleEndian.PutUint16(t.data[len(t.data)-2:], v)
+}
+
+func (t *Table) WriteDWord(v uint32) {
+	t.data = append(t.data, 0, 0, 0, 0)
+	binary.LittleEndian.PutUint32(t.data[len(t.data)-4:], v)
+}
+
+func (t *Table) WriteQWord(v uint64) {
+	t.data = append(t.data, 0, 0, 0, 0, 0, 0, 0, 0)
+	binary.LittleEndian.PutUint64(t.data[len(t.data)-8:], v)
+}
+
+func (t *Table) WriteString(s string) {
+	if s == "" {
+		t.WriteByte(0)
+	} else {
+		t.strings = append(t.strings, s)
+		// strings are 1-indexed bytes.
+		t.WriteByte(uint8(len(t.strings)))
+	}
+}
+
+func (t *Table) WriteBytes(v []byte) {
+	t.data = append(t.data, v...)
+}
+
 // GetBytesAt returns a number of bytes from the structured part at the specified offset.
 func (t *Table) GetBytesAt(offset, length int) ([]byte, error) {
 	if offset > len(t.data)-length {
@@ -93,7 +126,7 @@ func (t *Table) GetStringAt(offset int) (string, error) {
 	stringIndex := t.data[offset]
 	switch {
 	case stringIndex == 0:
-		return "Not Specified", nil
+		return "", nil
 	case int(stringIndex) <= len(t.strings):
 		return t.strings[stringIndex-1], nil
 	default:
